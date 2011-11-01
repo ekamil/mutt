@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+# To be used from mutt. Reads message from stdin, extracts message-id,
+# asks for args for notmuch tag.
+# Executes: notmuch tag [your args] id:[message-id]
+# This line in muttrc:
+# macro pager "\CB" "<pipe-message>~/.mutt/mutt-tag " "Tag message with notmuch"
+#
+# after pressing ^b you'll have to write +tag,-tag part and push enter.
+
+
+import sys
+from subprocess import call
+import re
+from email.Parser import Parser
+
+def main():
+    msg = sys.stdin.read()
+    p = Parser()
+    msgJustHeaders = p.parsestr(msg, True)
+    if 'Message-ID' in msgJustHeaders:
+        mid = msgJustHeaders['Message-ID']
+    elif 'Message-Id' in msgJustHeaders:
+        mid = msgJustHeaders['Message-Id']
+    if mid:
+        var = sys.argv[1:]
+        var = ' '.join(var)
+        cmd = "notmuch tag %s id:%s" % (var, mid)
+        print "Will call ", cmd
+        ret = call(cmd.split())
+    else:
+        print("No message-id header found")
+
+if __name__ == "__main__":
+    main()

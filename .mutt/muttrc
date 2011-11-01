@@ -1,0 +1,24 @@
+set crypt_use_gpgme
+# environment
+source "~/.mutt/muttrc.d/env.conf"
+
+# mailboxes
+source "~/.mutt/muttrc.mailboxes"
+
+# view
+source "~/.mutt/muttrc.d/view.conf"
+
+# colours
+source "~/.mutt/muttrc.d/colours.conf"
+
+# keybindings
+source "~/.mutt/muttrc.d/keys.conf"
+
+# macros
+source "~/.mutt/muttrc.d/macros.conf"
+
+# macros
+source "~/.mutt/muttrc.d/folder-hooks.conf"
+
+# config not meant for github
+source "~/.mutt/muttrc.d/private.conf"

@@ -1,0 +1,3 @@
+text/html;             lynx -display-charset=UTF-8 -force_html -dump %s -assume_charset=%{charset}; copiousoutput
+application/*;          ${HOME}/.local/bin/gnopen '%s'; test=test -n "$DISPLAY"
+image/*;          /usr/bin/eog '%s'; test=test -n "$DISPLAY"

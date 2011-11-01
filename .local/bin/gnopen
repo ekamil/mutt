@@ -1,0 +1,11 @@
+#! /usr/bin/env python
+
+import gnomevfs
+import os
+import sys
+
+mime_type = gnomevfs.get_mime_type(sys.argv[1])
+mime_app = gnomevfs.mime_get_default_application(mime_type)
+application = os.popen('whereis %s' % mime_app[2]).readline().split(' ')[1]
+
+os.execl(application, application, sys.argv[1])

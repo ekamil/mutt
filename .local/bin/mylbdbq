@@ -1,0 +1,4 @@
+#!/bin/bash
+# export LD_PRELOAD=/lib/libtsocks.so
+(lbdbq "$@" | tee >(head -n 1 >&2) 2>/dev/null | grep -v ^lbdbq:.*matches | tac) 2>&1
+# unset LD_PRELOAD
