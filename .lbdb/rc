@@ -1,0 +1,12 @@
+MODULES_PATH="$MODULES_PATH $HOME/.lbdb/modules"
+
+METHODS="m_inmail m_vcf m_pyldap"
+
+VCF_FILES="$HOME/.contacts.vcf"
+
+#SORT_OUTPUT=name
+SORT_OUTPUT=address
+
+# So that "good" name/comment fields aren't hidden
+# by garbage from m_inmail
+KEEP_DUPES=false

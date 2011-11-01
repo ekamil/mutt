@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Use goobook to query google contacts
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${prefix}/lib/lbdb
+
+m_pyldap_query ()
+{
+    python ~/.lbdb/modules/ldapq.py -s accenture -q "$@" | grep -v '^$' | sed 's/$/\t\(PYLDAP\)/'
+}
