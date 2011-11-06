@@ -1,1 +1,0 @@
-/home/kamil/.mutt/msmtp-wrapper.sh
