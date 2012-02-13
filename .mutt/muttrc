@@ -3,7 +3,7 @@ set crypt_use_gpgme
 source "~/.mutt/muttrc.d/env.conf"
 
 # mailboxes
-source "~/.mutt/muttrc.mailboxes"
+source "~/.mutt/mailboxes"
 
 # view
 source "~/.mutt/muttrc.d/view.conf"
@@ -17,8 +17,8 @@ source "~/.mutt/muttrc.d/keys.conf"
 # macros
 source "~/.mutt/muttrc.d/macros.conf"
 
-# macros
-source "~/.mutt/muttrc.d/folder-hooks.conf"
+# # macros
+# source "~/.mutt/muttrc.d/folder-hooks.conf"
 
 # config not meant for github
 source "~/.mutt/muttrc.d/private.conf"
