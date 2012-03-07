@@ -2,9 +2,6 @@ set crypt_use_gpgme
 # environment
 source "~/.mutt/conf.d/env.conf"
 
-# mailboxes
-# source "~/.mutt/mailboxes"
-
 # view
 source "~/.mutt/conf.d/view.conf"
 

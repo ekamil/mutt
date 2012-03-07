@@ -70,7 +70,7 @@ MSMTP=msmtp
 ##            ( chmod 0700 msmtp.queue )
 ##
 ## the queue dir - modify this to reflect where you'd like it to be  (no quotes !!)
-Q=~/Mail/queue
+Q="${HOME}/Mail/queue"
 [ -d "$Q" ] || \
   err '' "msmtpq : can't find msmtp queue directory [ $Q ]" ''     # if not present - complain ; quit
 ##
