@@ -1,0 +1,28 @@
+#!/bin/zsh
+
+account=$1
+config_file=$HOME/.mutt/accounts/${account}.conf
+mutt=/usr/bin/mutt-org
+cmd="source ${config_file}"
+
+if [ -z $account ]
+then 
+    $mutt
+    exit 0
+fi
+
+if [ $account = '-l' ]
+then
+    for d in $HOME/.mutt/accounts/*conf
+    do
+        echo ${d:r:t}
+    done
+    exit 0
+fi
+
+if [ -f $config_file ]
+then 
+    $mutt -e $cmd
+else
+    $mutt $@
+fi
