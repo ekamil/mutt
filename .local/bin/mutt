@@ -1,6 +1,9 @@
 #!/bin/zsh
 
-account=$1
+args=($@)
+account=$args[1]
+args=($args[2,-1])
+
 config_file=$HOME/.mutt/accounts/${account}.conf
 mutt=/usr/bin/mutt-org
 cmd="source ${config_file}"
@@ -22,7 +25,7 @@ fi
 
 if [ -f $config_file ]
 then 
-    $mutt -e $cmd
+    $mutt -e $cmd $args
 else
     $mutt $@
 fi
