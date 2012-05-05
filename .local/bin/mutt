@@ -4,9 +4,22 @@ args=($@)
 account=$args[1]
 args=($args[2,-1])
 
-config_file=$HOME/.mutt/accounts/${account}.conf
 mutt=/usr/bin/mutt-org
+config_file=$HOME/.mutt/accounts/${account}.conf
+if [ ! -f $config_file ]
+then 
+    config_file=$HOME/.mutt/accounts/default.conf
+fi
 cmd="source ${config_file}"
+
+if [ $account = '-l' ]
+then
+    for d in $HOME/.mutt/accounts/*conf
+    do
+        echo ${d:r:t}
+    done
+    exit 0
+fi
 
 if [ -z $account ]
 then 
@@ -23,9 +36,4 @@ then
     exit 0
 fi
 
-if [ -f $config_file ]
-then 
-    $mutt -e $cmd $args
-else
-    $mutt $@
-fi
+$mutt -e $cmd $args
