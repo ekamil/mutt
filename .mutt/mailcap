@@ -1,3 +1,4 @@
-application/*;          ${HOME}/.local/bin/gnopen '%s'; test=test -n "$DISPLAY"
+# application/*;          ${HOME}/.local/bin/gnopen '%s'; test=test -n "$DISPLAY"
+application/pdf;          /usr/bin/xpdf '%s'; test=test -n "$DISPLAY"
 image/*;          /usr/bin/eog '%s'; test=test -n "$DISPLAY"
 text/html;      w3m -I %{charset} -dump %s; nametemplate=%s.html; copiousoutput
