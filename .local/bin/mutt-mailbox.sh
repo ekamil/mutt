@@ -1,0 +1,20 @@
+#!/bin/zsh
+#===============================================================================
+#          FILE:  mutt-mailbox.sh
+#         USAGE:  ./mutt-mailbox.sh 
+#   DESCRIPTION:  
+#        AUTHOR: Kamil Essekkat kamil@essekkat.pl
+#       CREATED: 13.09.2012 22:08:24 CEST
+#===============================================================================
+
+str=$1
+ignore_case='-i'
+maildir=$HOME/Mail
+mutt=/home/kamil/.local/bin/mutt
+profile=ke
+
+term=$HOME/.local/bin/urxvt-zenburn.sh
+
+box=`find $maildir | grep $ignore_case  $str | head -n 1`
+
+$term -e $mutt $profile -f $box
