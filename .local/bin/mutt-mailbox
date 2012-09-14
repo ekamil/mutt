@@ -16,5 +16,6 @@ profile=ke
 term=$HOME/.local/bin/urxvt-zenburn.sh
 
 box=`find $maildir | grep $ignore_case  $str | head -n 1`
+[ -z $box ] && exit 0
 
 $term -e $mutt $profile -f $box

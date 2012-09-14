@@ -1,6 +1,6 @@
 MODULES_PATH="$MODULES_PATH $HOME/.lbdb/modules"
 
-METHODS="m_inmail m_vcf m_pyldap"
+METHODS="m_inmail m_pyldap"
 
 VCF_FILES="$HOME/.contacts.vcf"
 
