@@ -18,4 +18,4 @@ term=$HOME/.local/bin/urxvt-zenburn.sh
 box=`find $maildir | grep $ignore_case  $str | head -n 1`
 [ -z $box ] && exit 0
 
-$mutt $profile -f $box
+[ -n "$DISPLAY" ] && $term -e $mutt $profile -f $box
