@@ -1,21 +1,30 @@
 #!/usr/bin/perl -w
 #
-# mutt-notmuch - notmuch (of a) helper for Mutt
+# notmuch-mutt - notmuch (of a) helper for Mutt
 #
-# Copyright: Â© 2011 Stefano Zacchiroli <zack@upsilon.cc> 
+# Copyright: © 2011-2012 Stefano Zacchiroli <zack@upsilon.cc> 
 # License: GNU General Public License (GPL), version 3 or above
 #
 # See the bottom of this file for more documentation.
-# A manpage can be obtained by running "pod2man mutt-notmuch > mutt-notmuch.1"
+# A manpage can be obtained by running "pod2man notmuch-mutt > notmuch-mutt.1"
 
 use strict;
 use warnings;
 
 use File::Path;
-use Getopt::Long;
+use Getopt::Long qw(:config no_getopt_compat);
 use Mail::Internet;
 use Mail::Box::Maildir;
 use Pod::Usage;
+use String::ShellQuote;
+use Term::ReadLine;
+use Digest::SHA;
+use File::Which;
+
+
+my $xdg_cache_dir = "$ENV{HOME}/.cache";
+$xdg_cache_dir = $ENV{XDG_CACHE_HOME} if $ENV{XDG_CACHE_HOME};
+my $cache_dir = "$xdg_cache_dir/notmuch/mutt";
 
 
 # create an empty maildir (if missing) or empty an existing maildir"
@@ -27,26 +36,84 @@ sub empty_maildir($) {
     $folder->close();
 }
 
-# search($maildir, $query)
+# Match files by size and SHA-256; then delete duplicates
+sub builtin_remove_dups($) {
+    my ($maildir) = @_;
+    my (%size_to_files, %sha_to_files);
+
+    # Group files by matching sizes
+    foreach my $file (glob("$maildir/cur/*")) {
+        my $size = -s $file;
+        push(@{$size_to_files{$size}}, $file) if $size;
+    }
+
+    foreach my $same_size_files (values %size_to_files) {
+        # Don't run sha unless there is another file of the same size
+        next if scalar(@$same_size_files) < 2;
+        %sha_to_files = ();
+
+        # Group files with matching sizes by SHA-256
+        foreach my $file (@$same_size_files) {
+            open(my $fh, '<', $file) or next;
+            binmode($fh);
+            my $sha256hash = Digest::SHA->new(256)->addfile($fh)->hexdigest;
+            close($fh);
+
+            push(@{$sha_to_files{$sha256hash}}, $file);
+        }
+
+        # Remove duplicates
+        foreach my $same_sha_files (values %sha_to_files) {
+            next if scalar(@$same_sha_files) < 2;
+            unlink(@{$same_sha_files}[1..$#$same_sha_files]);
+        }
+    }
+}
+
+# Use either fdupes or the built-in scanner to detect and remove duplicate
+# search results in the maildir
+sub remove_duplicates($) {
+    my ($maildir) = @_;
+
+    my $fdupes = which("fdupes");
+    if ($fdupes) {
+      system("$fdupes --hardlinks --symlinks --delete --noprompt"
+             . " --quiet $maildir/cur/ > /dev/null");
+    } else {
+        builtin_remove_dups($maildir);
+    }
+}
+
+# search($maildir, $remove_dups, $query)
 # search mails according to $query with notmuch; store results in $maildir
-sub search($$) {
-    my ($maildir, $query) = @_;
+sub search($$$) {
+    my ($maildir, $remove_dups, $query) = @_;
+    $query = shell_quote($query);
 
     empty_maildir($maildir);
     system("notmuch search --output=files $query"
 	   . " | sed -e 's: :\\\\ :g'"
 	   . " | xargs --no-run-if-empty ln -s -t $maildir/cur/");
+    remove_duplicates($maildir) if ($remove_dups);
 }
 
-sub prompt($) {
-    my ($text) = @_;
+sub prompt($$) {
+    my ($text, $default) = @_;
     my $query = "";
+    my $term = Term::ReadLine->new( "notmuch-mutt" );
+    my $histfile = "$cache_dir/history";
+
+    $term->ornaments( 0 );
+    $term->unbind_key( ord( "\t" ) );
+    $term->MinLine( 3 );
+    $histfile = $ENV{MUTT_NOTMUCH_HISTFILE} if $ENV{MUTT_NOTMUCH_HISTFILE};
+    $term->ReadHistory($histfile) if (-r $histfile);
     while (1) {
-	print $text;
-	chomp($query = <STDIN>);
+	chomp($query = $term->readline($text, $default));
 	if ($query eq "?") {
-	    system("man notmuch");
+	    system("man", "notmuch-search-terms");
 	} else {
+	    $term->WriteHistory($histfile);
 	    return $query;
 	}
     }
@@ -58,32 +125,36 @@ sub get_message_id() {
     return $1;
 }
 
-sub search_action($$@) {
-    my ($interactive, $results_dir, @params) = @_;
+sub search_action($$$@) {
+    my ($interactive, $results_dir, $remove_dups, @params) = @_;
 
     if (! $interactive) {
-	search($results_dir, join(' ', @params));
+	search($results_dir, $remove_dups, join(' ', @params));
     } else {
-	my $query = prompt("search ('?' for man): ");
+	my $query = prompt("search ('?' for man): ", join(' ', @params));
 	if ($query ne "") {
-	    search($results_dir,$query);
+	    search($results_dir, $remove_dups, $query);
 	}
     }
 }
 
-sub thread_action(@) {
-    my ($results_dir, @params) = @_;
+sub thread_action($$@) {
+    my ($results_dir, $remove_dups, @params) = @_;
+
     my $mid = get_message_id();
-    my $tid = `notmuch search --output=threads id:$mid`;# get thread id
+    my $search_cmd = 'notmuch search --output=threads ' . shell_quote("id:$mid");
+    my $tid = `$search_cmd`;	# get thread id
     chomp($tid);
 
-    search($results_dir, $tid);
+    search($results_dir, $remove_dups, $tid);
 }
 
 sub tag_action(@) {
     my $mid = get_message_id();
 
-    system("notmuch tag ".join(' ', @_)." id:$mid");
+    system("notmuch tag "
+	   . shell_quote(join(' ', @_))
+	   . " id:$mid");
 }
 
 sub die_usage() {
@@ -93,16 +164,24 @@ sub die_usage() {
 }
 
 sub main() {
-    my $results_dir = "$ENV{HOME}/.cache/mutt_results";
+    mkpath($cache_dir) unless (-d $cache_dir);
+
+    my $results_dir = "$cache_dir/results";
     my $interactive = 0;
     my $help_needed = 0;
+    my $remove_dups = 0;
 
     my $getopt = GetOptions(
 	"h|help" => \$help_needed,
 	"o|output-dir=s" => \$results_dir,
-	"p|prompt" => \$interactive);
+	"p|prompt" => \$interactive,
+	"r|remove-dups" => \$remove_dups);
     if (! $getopt || $#ARGV < 0) { die_usage() };
     my ($action, @params) = ($ARGV[0], @ARGV[1..$#ARGV]);
+
+    foreach my $param (@params) {
+      $param =~ s/folder:=/folder:/g;
+    }
 
     if ($help_needed) {
 	die_usage();
@@ -110,9 +189,9 @@ sub main() {
 	print STDERR "Error: no search term provided\n\n";
 	die_usage();
     } elsif ($action eq "search") {
-	search_action($interactive, $results_dir, @params);
+	search_action($interactive, $results_dir, $remove_dups, @params);
     } elsif ($action eq "thread") {
-	thread_action($results_dir, @params);
+	thread_action($results_dir, $remove_dups, @params);
     } elsif ($action eq "tag") {
 	tag_action(@params);
     } else {
@@ -126,24 +205,24 @@ __END__
 
 =head1 NAME
 
-mutt-notmuch - notmuch (of a) helper for Mutt
+notmuch-mutt - notmuch (of a) helper for Mutt
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<mutt-notmuch> [I<OPTION>]... search [I<SEARCH-TERM>]...
+=item B<notmuch-mutt> [I<OPTION>]... search [I<SEARCH-TERM>]...
 
-=item B<mutt-notmuch> [I<OPTION>]... thread < I<MAIL>
+=item B<notmuch-mutt> [I<OPTION>]... thread < I<MAIL>
 
-=item B<mutt-notmuch> [I<OPTION>]... tag [I<TAGS>]... < I<MAIL>
+=item B<notmuch-mutt> [I<OPTION>]... tag [I<TAGS>]... < I<MAIL>
 
 =back
 
 =head1 DESCRIPTION
 
-mutt-notmuch is a frontend to the notmuch mail indexer capable of populating
-maildir with search results.
+notmuch-mutt is a frontend to the notmuch mail indexer capable of populating
+a maildir with search results.
 
 =head1 OPTIONS
 
@@ -154,7 +233,7 @@ maildir with search results.
 =item --output-dir DIR
 
 Store search results as (symlink) messages under maildir DIR. Beware: DIR will
-be overwritten. (Default: F<~/.cache/mutt_results/>)
+be overwritten. (Default: F<~/.cache/notmuch/mutt/results/>)
 
 =item -p
 
@@ -162,6 +241,12 @@ be overwritten. (Default: F<~/.cache/mutt_results/>)
 
 Instead of using command line search terms, prompt the user for them (only for
 "search").
+
+=item -r
+
+=item --remove-dups
+
+Remove duplicates from search results.
 
 =item -h
 
@@ -173,28 +258,27 @@ Show usage information and exit.
 
 =head1 INTEGRATION WITH MUTT
 
-mutt-notmuch can be used to integrate notmuch with the Mutt mail user agent
-(unsurprisingly, given the name). To that end, you should define the following
-macros in your F<~/.muttrc> (replacing F<~/bin/mutt-notmuch> for the actual
-location of mutt-notmuch on your system):
+notmuch-mutt can be used to integrate notmuch with the Mutt mail user agent
+(unsurprisingly, given the name). To that end, you should define macros like
+the following in your Mutt configuration (usually one of: F<~/.muttrc>,
+F</etc/Muttrc>, or a configuration snippet under F</etc/Muttrc.d/>):
 
     macro index <F8> \
-          "<enter-command>unset wait_key<enter><shell-escape>~/bin/mutt-notmuch --prompt search<enter><change-folder-readonly>~/.cache/mutt_results<enter>" \
-          "search mail (using notmuch)"
+          "<enter-command>unset wait_key<enter><shell-escape>notmuch-mutt -r --prompt search<enter><change-folder-readonly>~/.cache/notmuch/mutt/results<enter>" \
+          "notmuch: search mail"
     macro index <F9> \
-          "<enter-command>unset wait_key<enter><pipe-message>~/bin/mutt-notmuch thread<enter><change-folder-readonly>~/.cache/mutt_results<enter><enter-command>set wait_key<enter>" \
-          "search and reconstruct owning thread (using notmuch)"
+          "<enter-command>unset wait_key<enter><pipe-message>notmuch-mutt -r thread<enter><change-folder-readonly>~/.cache/notmuch/mutt/results<enter><enter-command>set wait_key<enter>" \
+          "notmuch: reconstruct thread"
     macro index <F6> \
-          "<enter-command>unset wait_key<enter><pipe-message>~/bin/mutt-notmuch tag -inbox<enter>" \
-          "remove message from inbox (using notmuch)"
+          "<enter-command>unset wait_key<enter><pipe-message>notmuch-mutt tag -- -inbox<enter>" \
+          "notmuch: remove message from inbox"
 
-The first macro (activated by <F8>) will prompt the user for notmuch search
-terms and then jump to a temporary maildir showing search results. The second
-macro (activated by <F9>) will reconstruct the thread corresponding to the
-current mail and show it as search results. The third macro (activated by <F6>)
-removes the tag C<inbox> from the current message; by changing C<-inbox> this
-macro may be customised to add or remove tags appropriate to the users notmuch
-work-flow.
+The first macro (activated by <F8>) prompts the user for notmuch search terms
+and then jump to a temporary maildir showing search results. The second macro
+(activated by <F9>) reconstructs the thread corresponding to the current mail
+and show it as search results. The third macro (activated by <F6>) removes the
+tag C<inbox> from the current message; by changing C<-inbox> this macro may be
+customised to add or remove tags appropriate to the users notmuch work-flow.
 
 To keep notmuch index current you should then periodically run C<notmuch
 new>. Depending on your local mail setup, you might want to do that via cron,
@@ -206,7 +290,7 @@ mutt(1), notmuch(1)
 
 =head1 AUTHOR
 
-Copyright: (C) 2011 Stefano Zacchiroli <zack@upsilon.cc>
+Copyright: (C) 2011-2012 Stefano Zacchiroli <zack@upsilon.cc>
 
 License: GNU General Public License (GPL), version 3 or higher
 
