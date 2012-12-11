@@ -14,5 +14,11 @@ source "~/.mutt/conf.d/keys.conf"
 # macros
 source "~/.mutt/conf.d/macros.conf"
 
+# pager
+source "~/.mutt/conf.d/pager.conf"
+
+# sidebar
+# source "~/.mutt/conf.d/sidebar.conf"
+
 # config not meant for github
 source "~/.mutt/conf.d/private.conf"
