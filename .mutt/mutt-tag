@@ -10,25 +10,29 @@
 
 import sys
 from subprocess import call
-import re
 from email.Parser import Parser
+
 
 def main():
     msg = sys.stdin.read()
     p = Parser()
     msgJustHeaders = p.parsestr(msg, True)
+    mid = None
     if 'Message-ID' in msgJustHeaders:
         mid = msgJustHeaders['Message-ID']
     elif 'Message-Id' in msgJustHeaders:
         mid = msgJustHeaders['Message-Id']
     if mid:
-        var = sys.argv[1:]
-        var = ' '.join(var)
+        mid = mid.lstrip('<')
+        mid = mid.rstrip('>')
+        var = ' '.join(sys.argv[1:])
         cmd = "notmuch tag %s id:%s" % (var, mid)
         print "Will call ", cmd
         ret = call(cmd.split())
+        sys.exit(ret)
     else:
         print("No message-id header found")
 
 if __name__ == "__main__":
     main()
+# vim: set ts=4 sw=4 tw=72 ft=python:
