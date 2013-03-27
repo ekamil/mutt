@@ -2,5 +2,5 @@ application/pdf;          /usr/bin/xpdf '%s'; test=test -n "$DISPLAY"
 application/pdf;          /usr/bin/pdftotext -layout '%s' - ; copiousoutput
 image/*;          /usr/bin/eog '%s'; test=test -n "$DISPLAY"
 
-text/html;      /home/kamil/.local/bin/firefox5 file://%s; nametemplate=%s.html; copiousoutput; test=test -n "$DISPLAY"; test=test -f "$HOME/.local/var/run/firefox5.lock"
 text/html;      w3m -I %{charset} -dump %s; nametemplate=%s.html; copiousoutput
+text/html;      /home/kamil/.local/bin/firefox5 file://%s; nametemplate=%s.html; copiousoutput; test=test -n "$DISPLAY"; test=test -f "$HOME/.local/var/run/firefox5.lock"

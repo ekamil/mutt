@@ -1,0 +1,23 @@
+#!/bin/bash
+
+FF="$HOME/.local/bin/firefox5"
+FF_ARGS=""
+FF_LOCK="$HOME/.local/var/run/firefox5.lock"
+TEMP=`mktemp --suffix=.html`
+
+if [ -z "$DISPLAY" ]
+then
+    echo "No display"
+    exit 1
+fi
+if [ ! -f "$FF_LOCK" ]
+then
+    echo "Firefox not running"
+    exit 2
+fi
+
+cat > $TEMP
+
+$FF $FF_ARGS file://$TEMP
+
+# vim: set ts=2 sw=4 tw=2000 ft=sh:
