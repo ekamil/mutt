@@ -1,4 +1,4 @@
-set crypt_use_gpgme
+# set crypt_use_gpgme
 # environment
 source "~/.mutt/conf.d/env.conf"
 
