@@ -1,3 +1,5 @@
+# application/pdf;          /usr/bin/xpdf '%s'; test=test -n "$DISPLAY"
+application/pdf;          /usr/bin/evince '%s'; test=test -n "$DISPLAY"
 application/pdf;          /usr/bin/xpdf '%s'; test=test -n "$DISPLAY"
 application/pdf;          /usr/bin/pdftotext -layout '%s' - ; copiousoutput
 image/*;          /usr/bin/eog '%s'; test=test -n "$DISPLAY"
