@@ -1,6 +1,6 @@
 MODULES_PATH="$MODULES_PATH $HOME/.lbdb/modules"
 
-METHODS="m_inmail"
+METHODS="m_inmail m_goobook"
 
 VCF_FILES="$HOME/.contacts.vcf"
 
