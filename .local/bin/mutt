@@ -2,6 +2,7 @@
 
 args=($@)
 account=$args[1]
+account=${account:-default}
 args=($args[2,-1])
 
 mutt=/usr/bin/mutt-org
@@ -13,7 +14,7 @@ then
 fi
 cmd="source ${config_file}"
 
-if [ $account = '-l' ]
+if [[ $account = '-l' ]]
 then
     for d in $HOME/.mutt/accounts/*conf
     do
@@ -22,7 +23,7 @@ then
     exit 0
 fi
 
-if [ -z $account ]
+if [[ -z $account ]]
 then 
     $mutt
     exit 0
